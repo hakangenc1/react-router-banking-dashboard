@@ -1,43 +1,27 @@
-import { Suspense } from "react"
+import { lazy, Suspense } from "react"
 import { useLoaderData, Await } from "react-router"
-import type { Route } from "./+types/home"
 import { Header } from "../components/header"
-import { NetBalanceWidget } from "../components/net-balance-widget"
-import { AccountsWidget } from "../components/accounts-widget"
-import { RecentActivityWidget } from "../components/recent-activity-widget"
-import { MarketInsightsWidget } from "../components/market-insights-widget"
-import { TransferBanner } from "../components/transfer-banner"
-import { WatchlistWidget } from "../components/watchlist-widget"
 import { WidgetSkeleton } from "../components/widget-skeleton"
+import { EntitlementRenderer } from "../components/entitlement-renderer"
+import { fetchNetBalance, fetchAccounts, fetchRecentActivity, fetchMarketInsights, fetchEntitlements } from "../lib/api"
 
-const API_BASE = "http://localhost:4000/api"
+const LazyNetBalanceWidget = lazy(() =>
+  import("../components/net-balance-widget").then((m) => ({ default: m.NetBalanceWidget })),
+)
 
-async function fetchNetBalance() {
-  const res = await fetch(`${API_BASE}/net-balance`)
-  if (!res.ok) throw new Error("Failed to fetch net balance")
-  return res.json()
-}
-
-async function fetchAccounts() {
-  const res = await fetch(`${API_BASE}/accounts`)
-  if (!res.ok) throw new Error("Failed to fetch accounts")
-  return res.json()
-}
-
-async function fetchRecentActivity() {
-  const res = await fetch(`${API_BASE}/recent-activity`)
-  if (!res.ok) throw new Error("Failed to fetch recent activity")
-  return res.json()
-}
-
-async function fetchMarketInsights() {
-  const res = await fetch(`${API_BASE}/market-insights`)
-  if (!res.ok) throw new Error("Failed to fetch market insights")
-  return res.json()
-}
+const LazyTransferBanner = lazy(() =>
+  import("../components/transfer-banner").then((m) => ({ default: m.TransferBanner })),
+)
+const LazyWatchlistWidget = lazy(() =>
+  import("../components/watchlist-widget").then((m) => ({ default: m.WatchlistWidget })),
+)
 
 export async function loader() {
+
+  const userTier = "basic" // 'basic', 'premium', 'wealth'
+
   return ({
+    entitlements: fetchEntitlements(userTier), // Non-blocking - page shell renders immediately
     netBalance: fetchNetBalance(),
     accounts: fetchAccounts(),
     recentActivity: fetchRecentActivity(),
@@ -45,15 +29,14 @@ export async function loader() {
   })
 }
 
-export default function Home({ loaderData }: Route.ComponentProps) {
-  const data = loaderData;
+export default function Home() {
+  const data = useLoaderData<typeof loader>()
 
   return (
     <div className="min-h-screen bg-[#fafafa]">
       <Header />
 
       <main className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
-        {/* Welcome Section */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-normal text-[#333]">Welcome</h1>
@@ -71,30 +54,42 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </div>
         </div>
 
-        {/* Net Balance Widget */}
-        <Suspense fallback={<WidgetSkeleton height="200px" />}>
-          <Await resolve={data.netBalance}>{(netBalance) => <NetBalanceWidget data={netBalance} />}</Await>
+        {/* Net Balance - Always visible to all users */}
+        <Suspense fallback={<WidgetSkeleton height="240px" />}>
+          <Await resolve={data.netBalance}>
+            {(netBalance) => (
+              <Suspense fallback={<WidgetSkeleton height="240px" />}>
+                <LazyNetBalanceWidget data={netBalance} />
+              </Suspense>
+            )}
+          </Await>
         </Suspense>
 
-        {/* Accounts Widget */}
-        <Suspense fallback={<WidgetSkeleton height="300px" />}>
-          <Await resolve={data.accounts}>{(accounts) => <AccountsWidget data={accounts} />}</Await>
+        {/* Accounts Widget - Requires canViewBasicAccounts permission */}
+        <Suspense fallback={<WidgetSkeleton height="360px" />}>
+          <Await resolve={data.entitlements}>
+            <EntitlementRenderer widgetType="accounts" dataPromise={data.accounts} fallbackHeight="360px" />
+          </Await>
         </Suspense>
 
-        {/* Recent Activity Widget */}
+        {/* Recent Activity Widget - Requires canViewRecentActivity permission */}
         <Suspense fallback={<WidgetSkeleton height="250px" />}>
-          <Await resolve={data.recentActivity}>{(activity) => <RecentActivityWidget data={activity} />}</Await>
-        </Suspense>
+          <Await resolve={data.entitlements}>
+            <EntitlementRenderer widgetType="recentActivity" dataPromise={data.recentActivity} fallbackHeight="250px" />
+          </Await>
+        </Suspense>        
+        
+        {/* Transfer Banner - Always visible to all users */}
+        <LazyTransferBanner />
 
-        {/* Transfer Banner */}
-        <TransferBanner />
+        {/* Watchlist Widget - Always visible to all users */}
+        <LazyWatchlistWidget />
 
-        {/* Watchlist Widget */}
-        <WatchlistWidget />
-
-        {/* Market Insights Widget */}
-        <Suspense fallback={<WidgetSkeleton height="350px" />}>
-          <Await resolve={data.marketInsights}>{(insights) => <MarketInsightsWidget data={insights} />}</Await>
+        {/* Market Insights Widget - Requires canViewMarketInsights permission (Wealth tier) */}
+        <Suspense fallback={<WidgetSkeleton height="340px" />}>
+          <Await resolve={data.entitlements}>
+            <EntitlementRenderer widgetType="marketInsights" dataPromise={data.marketInsights} fallbackHeight="340px" />
+          </Await>
         </Suspense>
       </main>
     </div>

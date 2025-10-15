@@ -1,6 +1,9 @@
+import { Suspense } from "react"
+import { Await } from "react-router"
 import { TrendingUp, TrendingDown } from "lucide-react"
 import { Card } from "./ui/card"
 import { LineChart, Line, ResponsiveContainer } from "recharts"
+import { WidgetSkeleton } from "./widget-skeleton"
 
 interface MarketData {
   symbol: string
@@ -12,7 +15,15 @@ interface MarketData {
   articles: { title: string; time: string }[]
 }
 
-export function MarketInsightsWidget({ data }: { data: MarketData[] }) {
+export function MarketInsightsWidget({ dataPromise }: { dataPromise: Promise<MarketData[]> }) {
+  return (
+    <Suspense fallback={<WidgetSkeleton height="350px" />}>
+      <Await resolve={dataPromise}>{(data) => <MarketInsightsWidgetContent data={data} />}</Await>
+    </Suspense>
+  )
+}
+
+function MarketInsightsWidgetContent({ data }: { data: MarketData[] }) {
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">

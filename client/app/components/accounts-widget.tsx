@@ -1,6 +1,8 @@
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { ChevronDown, ChevronRight, Info } from "lucide-react"
+import { Await } from "react-router"
 import { Card } from "./ui/card"
+import { WidgetSkeleton } from "./widget-skeleton"
 
 interface Account {
   id: string
@@ -19,7 +21,15 @@ interface AccountGroup {
   accounts: Account[]
 }
 
-export function AccountsWidget({ data }: { data: AccountGroup[] }) {
+export function AccountsWidget({ dataPromise }: { dataPromise: Promise<AccountGroup[]> }) {
+  return (
+    <Suspense fallback={<WidgetSkeleton height="300px" />}>
+      <Await resolve={dataPromise}>{(data) => <AccountsWidgetContent data={data} />}</Await>
+    </Suspense>
+  )
+}
+
+function AccountsWidgetContent({ data }: { data: AccountGroup[] }) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["Investment Accounts"]))
 
   const toggleGroup = (groupName: string) => {

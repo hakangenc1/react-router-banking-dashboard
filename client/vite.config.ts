@@ -1,5 +1,5 @@
-import { reactRouter } from "@react-router/dev/vite";
-import { defineConfig } from "vite";
+import { reactRouter } from "@react-router/dev/vite"
+import { defineConfig } from "vite"
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
@@ -7,4 +7,4 @@ export default defineConfig({
   server: {
     port: 3000,
   },
-});
+})

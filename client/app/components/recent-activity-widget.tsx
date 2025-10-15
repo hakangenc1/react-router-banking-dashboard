@@ -1,4 +1,7 @@
+import { Suspense } from "react"
+import { Await } from "react-router"
 import { Card } from "./ui/card"
+import { WidgetSkeleton } from "./widget-skeleton"
 
 interface Activity {
   id: string
@@ -10,7 +13,15 @@ interface Activity {
   service: string
 }
 
-export function RecentActivityWidget({ data }: { data: Activity[] }) {
+export function RecentActivityWidget({ dataPromise }: { dataPromise: Promise<Activity[]> }) {
+  return (
+    <Suspense fallback={<WidgetSkeleton height="250px" />}>
+      <Await resolve={dataPromise}>{(data) => <RecentActivityWidgetContent data={data} />}</Await>
+    </Suspense>
+  )
+}
+
+function RecentActivityWidgetContent({ data }: { data: Activity[] }) {
   return (
     <Card className="p-6">
       <div className="flex items-center justify-between mb-4">

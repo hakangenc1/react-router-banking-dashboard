@@ -191,25 +191,83 @@ const mockMarketInsights = [
   },
 ]
 
+const userProfiles = {
+  basic: {
+    tier: "basic",
+    permissions: {
+      canViewNetBalance: true,
+      canViewBasicAccounts: false,
+      canViewRecentActivity: false,
+      canViewMarketInsights: false,
+      canViewAdvancedAnalytics: false,
+      canViewWatchlist: false,
+      canViewTransfer: false
+    },
+  },
+  premium: {
+    tier: "premium",
+    permissions: {
+      canViewNetBalance: true,
+      canViewBasicAccounts: true,
+      canViewRecentActivity: false,
+      canViewMarketInsights: false,
+      canViewAdvancedAnalytics: false,
+      canViewWatchlist: true,
+      canViewTransfer: true,
+    },
+  },
+  wealth: {
+    tier: "wealth",
+    permissions: {
+      canViewNetBalance: true,
+      canViewBasicAccounts: true,
+      canViewRecentActivity: true,
+      canViewMarketInsights: true,
+      canViewAdvancedAnalytics: true,
+      canViewWatchlist: true,
+      canViewTransfer: true,
+    },
+  },
+}
+
+const dataDelays = {
+  netBalance: 600,
+  accounts: 800,
+  recentActivity: 1200,
+  marketInsights: 400,
+  entitlements: 800,
+}
+
 // API Routes
 app.get("/api/net-balance", async (req, res) => {
-  await delay(800) // Simulate network delay
+  await delay(dataDelays.netBalance) // Simulate network delay
   res.json(mockNetBalance)
 })
 
 app.get("/api/accounts", async (req, res) => {
-  await delay(1200) // Simulate network delay
+  await delay(dataDelays.accounts) // Simulate network delay
   res.json(mockAccounts)
 })
 
 app.get("/api/recent-activity", async (req, res) => {
-  await delay(600) // Simulate network delay
+  await delay(dataDelays.recentActivity) // Simulate network delay
   res.json(mockRecentActivity)
 })
 
 app.get("/api/market-insights", async (req, res) => {
-  await delay(1000) // Simulate network delay
+  await delay(dataDelays.marketInsights) // Simulate network delay
   res.json(mockMarketInsights)
+})
+
+app.get("/api/entitlements", async (req, res) => {
+  await delay(dataDelays.entitlements) // Simulate slow entitlement service
+
+  // Get user tier from query param, default to 'premium'
+  const tier = req.query.tier || "premium"
+  const profile = userProfiles[tier] || userProfiles.premium
+
+  console.log(`[Server] Returning entitlements for tier: ${tier}`)
+  res.json(profile)
 })
 
 // Health check
@@ -224,4 +282,5 @@ app.listen(PORT, () => {
   console.log(`   - GET http://localhost:${PORT}/api/accounts`)
   console.log(`   - GET http://localhost:${PORT}/api/recent-activity`)
   console.log(`   - GET http://localhost:${PORT}/api/market-insights`)
+  console.log(`   - GET http://localhost:${PORT}/api/entitlements`)
 })
